@@ -16,7 +16,8 @@ const categoryPages = {
   Политика: 'https://www.rbc.ru/politics/?utm_source=topline',
   Экономика: 'https://www.rbc.ru/economics/?utm_source=topline',
   Бизнес: 'https://www.rbc.ru/business/?utm_source=topline/',
-  'Технологии и медиа': 'https://www.rbc.ru/technology_and_media/?utm_source=topline',
+  'Технологии и медиа':
+    'https://www.rbc.ru/technology_and_media/?utm_source=topline',
 };
 
 app.get('/categories', async (req, res) => {
@@ -37,14 +38,23 @@ app.get('/news/:category', async (req, res) => {
     const $ = cheerio.load(response.data);
     const news = [];
 
+    // $('.item__link.rm-cm-item-link.js-rm-central-column-item-link').each(
+    //   (index, element) => {
+    //     const title = $(element)
+    //       .find('.item__title.rm-cm-item-text.js-rm-central-column-item-text')
+    //       .text()
+    //       .trim();
+    //     const link = $(element).attr('href');
+    //     news.push({ title, link });
+    //   }
+    // );
+
     $('.item__link.rm-cm-item-link.js-rm-central-column-item-link').each(
-      (index, element) => {
-        const title = $(element)
-          .find('.item__title.rm-cm-item-text.js-rm-central-column-item-text')
-          .text()
-          .trim();
+      async (index, element) => {
         const link = $(element).attr('href');
-        news.push({ title, link });
+        const response = await axios.get(link);
+        const text = $('.article__text__overview span').text();
+        news.push({text})
       }
     );
 
@@ -63,7 +73,9 @@ bot.onText(/\/news/, async (msg) => {
 
   // Получаем категории с вашего API
   try {
-    const categoriesResponse = await axios.get('http://localhost:3000/categories');
+    const categoriesResponse = await axios.get(
+      'http://localhost:3000/categories'
+    );
     const categories = categoriesResponse.data;
 
     // Создаем массив кнопок с категориями
