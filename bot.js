@@ -43,7 +43,7 @@ bot.onText(/\/news/, async (msg) => {
     } else {
       const categoryButtons = categories
         .filter((category) =>
-          ['Экономика', 'В мире', 'Общество', 'Спорт', 'Культура'].includes(
+          ['Экономика', 'Общество', 'Спорт', 'Культура'].includes(
             category.title
           )
         )
@@ -69,35 +69,44 @@ bot.onText(/\/news/, async (msg) => {
 bot.onText(/\/subscribe/, async (msg) => {
   const chatId = msg.chat.id;
 
-  try {
-    const categories = await getCategories();
-
-    if (categories.length === 0) {
-      bot.sendMessage(chatId, 'Категории новостей не найдены.');
-    } else {
-      const categoryButtons = categories
-        .filter((category) =>
-          ['Экономика', 'В мире', 'Общество', 'Спорт', 'Культура'].includes(
-            category.title
-          )
-        )
-        .map((category) => ({
-          text: category.title,
-          callback_data: `subscribe ${category.href}`,
-        }));
-
-      const keyboard = categoryButtons.map((button) => [button]);
-
-      bot.sendMessage(chatId, 'Выберите категорию для подписки:', {
-        reply_markup: {
-          inline_keyboard: keyboard,
-        },
-      });
-    }
-  } catch (error) {
-    console.error('Ошибка при получении категорий новостей:', error.message);
-    bot.sendMessage(chatId, 'Ошибка при получении категорий новостей.');
+  if (isSubscribed(chatId)) {
+    bot.sendMessage(chatId, 'Вы уже подписаны на рассылку.');
+    return;
   }
+  const categoryTitle = '/tema/mir';
+
+  const categoryText = getCategoryFromSlug(categoryTitle);
+  // Сохраняем выбор пользователя в объекте userSubscriptions
+  const intervalId = setInterval(async () => {
+    try {
+      const newsData = await getNewsData(categoryTitle);
+
+      if (newsData.length === 0) {
+        bot.sendMessage(chatId, 'Новости не найдены.');
+      } else {
+        for (const news of newsData) {
+          const { title, text, imgSrc } = news;
+
+          const formattedTitle = `<b>${title}</b>`;
+          const message = `${formattedTitle}\n${text}`;
+
+          bot.sendPhoto(chatId, imgSrc, {
+            caption: message,
+            parse_mode: 'HTML',
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Ошибка при получении новостей:', error.message);
+      bot.sendMessage(chatId, 'Ошибка при получении новостей для рассылки.');
+    }
+  }, 5 * 1000);
+
+  subscribeUser(chatId, categoryTitle, intervalId);
+  bot.sendMessage(
+    chatId,
+    `Вы успешно подписались на категорию новостей: ${categoryText}`
+  );
 });
 
 bot.onText(/\/unsubscribe/, (msg) => {
@@ -148,50 +157,48 @@ bot.on('callback_query', async (query) => {
       console.error('Error while fetching news:', error.message);
       bot.sendMessage(chatId, 'Ошибка при получении новостей.');
     }
-  } else if (queryData.startsWith('subscribe')) {
-    const [, categoryTitle] = queryData.split(' ');
-
-    if (isSubscribed(chatId)) {
-      bot.sendMessage(chatId, 'Вы уже подписаны на рассылку.');
-      return;
-    }
-
-    const categoryText = getCategoryFromSlug(categoryTitle)
-    // Сохраняем выбор пользователя в объекте userSubscriptions
-    const intervalId = setInterval(async () => {
-      try {
-        const newsData = await getNewsData(categoryTitle);
-
-        if (newsData.length === 0) {
-          bot.sendMessage(chatId, 'Новости не найдены.');
-        } else {
-          for (const news of newsData) {
-            const { title, text, imgSrc } = news;
-
-            const formattedTitle = `<b>${title}</b>`;
-            const message = `${formattedTitle}\n${text}`;
-
-            bot.sendPhoto(chatId, imgSrc, {
-              caption: message,
-              parse_mode: 'HTML',
-            });
-          }
-        }
-      } catch (error) {
-        console.error('Ошибка при получении новостей:', error.message);
-        bot.sendMessage(
-          chatId,
-          'Ошибка при получении новостей для рассылки.'
-        );
-      }
-    }, 15 * 1000);
-
-    subscribeUser(chatId, categoryTitle, intervalId);
-    bot.sendMessage(
-      chatId,
-      `Вы успешно подписались на категорию новостей: ${categoryText}`
-    );
   }
+  //  else if (queryData.startsWith('subscribe')) {
+  //   const [, categoryTitle] = queryData.split(' ');
+
+  //   if (isSubscribed(chatId)) {
+  //     bot.sendMessage(chatId, 'Вы уже подписаны на рассылку.');
+  //     return;
+  //   }
+
+  //   const categoryText = getCategoryFromSlug(categoryTitle);
+  //   // Сохраняем выбор пользователя в объекте userSubscriptions
+  //   const intervalId = setInterval(async () => {
+  //     try {
+  //       const newsData = await getNewsData(categoryTitle);
+
+  //       if (newsData.length === 0) {
+  //         bot.sendMessage(chatId, 'Новости не найдены.');
+  //       } else {
+  //         for (const news of newsData) {
+  //           const { title, text, imgSrc } = news;
+
+  //           const formattedTitle = `<b>${title}</b>`;
+  //           const message = `${formattedTitle}\n${text}`;
+
+  //           bot.sendPhoto(chatId, imgSrc, {
+  //             caption: message,
+  //             parse_mode: 'HTML',
+  //           });
+  //         }
+  //       }
+  //     } catch (error) {
+  //       console.error('Ошибка при получении новостей:', error.message);
+  //       bot.sendMessage(chatId, 'Ошибка при получении новостей для рассылки.');
+  //     }
+  //   }, 15 * 1000);
+
+  //   subscribeUser(chatId, categoryTitle, intervalId);
+  //   bot.sendMessage(
+  //     chatId,
+  //     `Вы успешно подписались на категорию новостей: ${categoryText}`
+  //   );
+  // }
 });
 
 console.log('Telegram bot started.');
