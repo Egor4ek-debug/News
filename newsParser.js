@@ -1,27 +1,23 @@
 import axios from 'axios';
 import cheerio from 'cheerio';
 
-// Function to get news categories with title and href
-export async function getNewsCategoriesWithLinks() {
+export async function getCategories() {
   try {
     const response = await axios.get('https://rg.ru/');
     const $ = cheerio.load(response.data);
 
-    const categoriesWithLinks = [];
+    const categories = [];
     $('.navresp-visibleListLink').each((index, element) => {
       const title = $(element).attr('title');
       const href = $(element).attr('href');
-      
+
       if (title && href) {
-        categoriesWithLinks.push({ title, href });
+        categories.push({ title, href });
       }
     });
 
-    return categoriesWithLinks.filter(category => 
-      ['Экономика','В мире','Общество','Спорт','Культура'].includes(category.title)
-    );
+    return categories;
   } catch (error) {
-    console.error('Error while fetching news categories with links:', error.message);
     throw error;
   }
 }
