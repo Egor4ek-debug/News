@@ -8,16 +8,24 @@ export async function getNewsData(categoryLink) {
 
     const newsData = [];
 
-    $('.ItemOfListStandard_wrapper__bO1Hw.ItemOfListStandard_imageLeft__Mo4Nf').each((index, element) => {
+    $(
+      '.ItemOfListStandard_wrapper__bO1Hw.ItemOfListStandard_imageLeft__Mo4Nf'
+    ).each((index, element) => {
       const articleElement = $(element);
-      const title = articleElement.find('.ItemOfListStandard_title__eX0Jw').text();
-      const imgSrc = articleElement.find('.Image_img__m9RSC.ItemOfListStandard_image___sWCo').attr('src');
-      const articleLink = articleElement.find('.ItemOfListStandard_datetime__1tmwG').attr('href');
+      const title = articleElement
+        .find('.ItemOfListStandard_title__eX0Jw')
+        .text();
+      const imgSrc = articleElement
+        .find('.Image_img__m9RSC.ItemOfListStandard_image___sWCo')
+        .attr('src');
+      const articleLink = articleElement
+        .find('.ItemOfListStandard_datetime__1tmwG')
+        .attr('href');
 
       newsData.push({
         title: title,
         imgSrc: imgSrc,
-        articleLink: articleLink
+        articleLink: articleLink,
       });
     });
 
@@ -28,7 +36,11 @@ export async function getNewsData(categoryLink) {
       const articleHtml = articleResponse.data;
       const $$ = cheerio.load(articleHtml);
 
-      const text = $$('.PageArticleContent_lead__gvX5C').text();
+      let text = $$('.PageArticleContent_lead__gvX5C').text();
+      if (text == '') {
+        text = $$('p').first().text();
+        newsData[i].text = text;
+      }
       newsData[i].text = text;
     }
 

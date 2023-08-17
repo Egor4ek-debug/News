@@ -143,7 +143,6 @@ bot.on('callback_query', async (query) => {
         for (let i = 0; i < newsData.length; i++) {
           const news = newsData[i];
           const { title, text, imgSrc } = news;
-
           const formattedTitle = `<b>${title}</b>`;
           const message = `${formattedTitle}\n${text}`;
 
