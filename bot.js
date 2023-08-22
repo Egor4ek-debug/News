@@ -8,8 +8,10 @@ import {
   unsubscribeUser,
   isSubscribed,
 } from './subscriptions.js';
-
+import {checkForNewNews} from './newsCheker.js'
 dotenv.config();
+
+
 
 const botToken = process.env.BOT_TOKEN;
 const bot = new TelegramBot(botToken, { polling: true });
@@ -73,41 +75,47 @@ bot.onText(/\/subscribe/, async (msg) => {
     bot.sendMessage(chatId, 'Вы уже подписаны на рассылку.');
     return;
   }
+
   const categoryTitle = '/tema/mir';
-
   const categoryText = getCategoryFromSlug(categoryTitle);
-  // Сохраняем выбор пользователя в объекте userSubscriptions
-  const intervalId = setInterval(async () => {
-    try {
-      const newsData = await getNewsData(categoryTitle);
 
-      if (newsData.length === 0) {
-        bot.sendMessage(chatId, 'Новости не найдены.');
-      } else {
-        for (const news of newsData) {
-          const { title, text, imgSrc } = news;
+  try {
+    const newsData = await getNewsData(categoryTitle);
 
-          const formattedTitle = `<b>${title}</b>`;
-          const message = `${formattedTitle}\n${text}`;
+    if (newsData.length === 0) {
+      bot.sendMessage(chatId, 'Новости не найдены.');
+    } else {
+      const { title, text, imgSrc } = newsData[0];
 
-          bot.sendPhoto(chatId, imgSrc, {
-            caption: message,
-            parse_mode: 'HTML',
-          });
-        }
-      }
-    } catch (error) {
-      console.error('Ошибка при получении новостей:', error.message);
-      bot.sendMessage(chatId, 'Ошибка при получении новостей для рассылки.');
+      const formattedTitle = `<b>${title}</b>`;
+      const message = `${formattedTitle}\n${text}`;
+
+      bot.sendPhoto(chatId, imgSrc, {
+        caption: message,
+        parse_mode: 'HTML',
+      });
+
+      subscribeUser(chatId, categoryTitle);
+
+      const intervalId = setInterval(() => {
+        checkForNewNews(bot, userSubscriptions, chatId, categoryTitle); // Передаем bot и userSubscriptions
+      }, 3600000);
+
+      userSubscriptions[chatId].lastNewsTitle = title;
+      userSubscriptions[chatId].intervalId = intervalId;
+
+      bot.sendMessage(
+        chatId,
+        `Вы успешно подписались на категорию новостей: ${categoryText}`
+      );
     }
-  }, 5 * 1000);
-
-  subscribeUser(chatId, categoryTitle, intervalId);
-  bot.sendMessage(
-    chatId,
-    `Вы успешно подписались на категорию новостей: ${categoryText}`
-  );
+  } catch (error) {
+    console.error('Ошибка при получении новостей:', error.message);
+    bot.sendMessage(chatId, 'Ошибка при получении новостей для подписки.');
+  }
 });
+
+
 
 bot.onText(/\/unsubscribe/, (msg) => {
   const chatId = msg.chat.id;
@@ -157,47 +165,7 @@ bot.on('callback_query', async (query) => {
       bot.sendMessage(chatId, 'Ошибка при получении новостей.');
     }
   }
-  //  else if (queryData.startsWith('subscribe')) {
-  //   const [, categoryTitle] = queryData.split(' ');
-
-  //   if (isSubscribed(chatId)) {
-  //     bot.sendMessage(chatId, 'Вы уже подписаны на рассылку.');
-  //     return;
-  //   }
-
-  //   const categoryText = getCategoryFromSlug(categoryTitle);
-  //   // Сохраняем выбор пользователя в объекте userSubscriptions
-  //   const intervalId = setInterval(async () => {
-  //     try {
-  //       const newsData = await getNewsData(categoryTitle);
-
-  //       if (newsData.length === 0) {
-  //         bot.sendMessage(chatId, 'Новости не найдены.');
-  //       } else {
-  //         for (const news of newsData) {
-  //           const { title, text, imgSrc } = news;
-
-  //           const formattedTitle = `<b>${title}</b>`;
-  //           const message = `${formattedTitle}\n${text}`;
-
-  //           bot.sendPhoto(chatId, imgSrc, {
-  //             caption: message,
-  //             parse_mode: 'HTML',
-  //           });
-  //         }
-  //       }
-  //     } catch (error) {
-  //       console.error('Ошибка при получении новостей:', error.message);
-  //       bot.sendMessage(chatId, 'Ошибка при получении новостей для рассылки.');
-  //     }
-  //   }, 15 * 1000);
-
-  //   subscribeUser(chatId, categoryTitle, intervalId);
-  //   bot.sendMessage(
-  //     chatId,
-  //     `Вы успешно подписались на категорию новостей: ${categoryText}`
-  //   );
-  // }
+ 
 });
 
 console.log('Telegram bot started.');
