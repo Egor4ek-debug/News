@@ -8,10 +8,8 @@ import {
   unsubscribeUser,
   isSubscribed,
 } from './subscriptions.js';
-import {checkForNewNews} from './newsCheker.js'
+import { checkForNewNews } from './newsCheker.js';
 dotenv.config();
-
-
 
 const botToken = process.env.BOT_TOKEN;
 const bot = new TelegramBot(botToken, { polling: true });
@@ -33,6 +31,26 @@ function getCategoryFromSlug(slug) {
       return null; // Возвращаем null, если слаг не распознан
   }
 }
+
+bot.onText(/\/start/, (msg) => {
+  const chatId = msg.chat.id;
+
+  const startMessage = `
+  Добро пожаловать!
+
+  Я бот новостей, который поможет вам быть в курсе последних событий. Выберите интересующую вас категорию новостей, подпишитесь на рассылку, и я буду информировать вас о свежих новостях.
+
+  Доступные команды:
+  /news - Выбрать категорию новостей
+  /subscribe - Подписаться на рассылку новостей в категории "В мире"
+  /unsubscribe - Отписаться от рассылки новостей
+  /checksubscription - Проверить текущую подписку
+
+  Пожалуйста, выберите команду для начала.
+  `;
+
+  bot.sendMessage(chatId, startMessage);
+});
 
 bot.onText(/\/news/, async (msg) => {
   const chatId = msg.chat.id;
@@ -99,7 +117,7 @@ bot.onText(/\/subscribe/, async (msg) => {
 
       const intervalId = setInterval(() => {
         checkForNewNews(bot, userSubscriptions, chatId, categoryTitle); // Передаем bot и userSubscriptions
-      }, 3600000);
+      }, 300000);
 
       userSubscriptions[chatId].lastNewsTitle = title;
       userSubscriptions[chatId].intervalId = intervalId;
@@ -114,8 +132,6 @@ bot.onText(/\/subscribe/, async (msg) => {
     bot.sendMessage(chatId, 'Ошибка при получении новостей для подписки.');
   }
 });
-
-
 
 bot.onText(/\/unsubscribe/, (msg) => {
   const chatId = msg.chat.id;
@@ -165,7 +181,6 @@ bot.on('callback_query', async (query) => {
       bot.sendMessage(chatId, 'Ошибка при получении новостей.');
     }
   }
- 
 });
 
 console.log('Telegram bot started.');
